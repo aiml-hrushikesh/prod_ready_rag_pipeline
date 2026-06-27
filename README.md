@@ -1,7 +1,7 @@
  ## :warning: Please read these instructions carefully and entirely first
 * Clone this repository to your local machine.
 * Use your IDE of choice to complete the assignment.
-* When you have completed the assignment, you need to  push your code to this repository and [mark the assignment as completed by clicking here]({{submission_link}}).
+* When you have completed the assignment, you need to  push your code to this repository and [mark the assignment as completed by clicking here](https://app.snapcode.review/submission_links/d690b028-a2a8-4095-bf42-dce6d5e8ba4f).
 * Once you mark it as completed, your access to this repository will be revoked. Please make sure that you have completed the assignment and pushed all code from your local machine to this repository before you click the link.
 
 # RAG Pipeline Exercise
