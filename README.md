@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> d55ac52 (Add production deployment files and complete pipeline configuration)
 # RAG Pipeline Exercise
 
 This exercise involves implementing a Retrieval-Augmented Generation (RAG) pipeline to answer questions about Equal Experts case studies. The pipeline combines document chunking, embeddings, vector search, and LLM-based question answering.
@@ -73,12 +77,45 @@ Check the [Ollama website](https://ollama.com) for your operating system.
 ollama pull llama3.2
 ollama pull nomic-embed-text
 ```
-#### Running the pipeline
+#### Running the pipeline locally
 Make sure you have the environment activated and ollama running with the models downloaded.
 
 ```bash
-python -m src.main
+python -m src.main run
 ```
+
+#### Running with Docker
+Build and run the container locally:
+
+```bash
+docker build -t rag-pipeline .
+docker run --rm rag-pipeline
+```
+
+#### Deploying with Render
+1. Create a new Web Service on Render.
+2. Connect your GitHub repository.
+3. Set the build command to:
+
+```bash
+./scripts/render_build.sh
+```
+
+4. Set the start command to:
+
+```bash
+python -m src.main run
+```
+
+5. Add any required environment variables, such as:
+   - `OLLAMA_BASE_URL`
+   - `CASE_STUDIES_PATH`
+   - `COLLECTION_NAME`
+
+#### Publish Docker image to Docker Hub
+1. Create a Docker Hub repository.
+2. Add the secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` to GitHub Actions.
+3. Push to `main`, `master`, or `solution` to trigger the publish workflow.
 
 ### Developing Tooling
 

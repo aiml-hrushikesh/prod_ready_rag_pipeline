@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: rag-pipeline
+    env: python
+    plan: free
+    buildCommand: ./scripts/render_build.sh
+    startCommand: python -m src.main run
+    envVars:
+      - key: OLLAMA_BASE_URL
+        fromService: ollama
+      - key: CASE_STUDIES_PATH
+        value: ./case_studies.json
+      - key: COLLECTION_NAME
+        value: documents

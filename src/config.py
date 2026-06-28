@@ -9,18 +9,28 @@ class Settings(BaseSettings):
 
     # LLM Models
     LLM_MODEL: str = "llama3.2"
+    EMBEDDING_MODEL: str = "nomic-embed-text"
+    EMBEDDING_DIMENSION: int = 768
 
     # Model Parameters
     DEFAULT_TEMPERATURE: float = 0.7
     DEFAULT_TOP_P: float = 0.9
     MAX_TOKENS: int = 2048
-    EMBEDDING_MODEL: str = "nomic-embed-text"
-    EMBEDDING_DIMENSION: int = 768
+    DEFAULT_TOP_K: int = 3
+    DEFAULT_EMBEDDING_BATCH_SIZE: int = 16
 
     # Chunking Settings
     DEFAULT_CHUNK_SIZE: int = 500
     DEFAULT_CHUNK_OVERLAP: int = 50
-    DEFAULT_TOP_K: int = 3
+
+    # Application
+    LOG_LEVEL: str = "INFO"
+
+    model_config = {
+        "env_file": ".env",
+        "extra": "ignore",
+        "stripped_strings": True,
+    }
 
 
 settings = Settings()

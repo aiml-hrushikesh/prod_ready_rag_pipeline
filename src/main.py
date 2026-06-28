@@ -1,5 +1,9 @@
 import json
+import logging
+from pathlib import Path
 from typing import List
+
+import typer
 
 from src.chunking.chunking_strategies import AdvancedChunker, SimpleChunker
 from src.config import settings
@@ -8,7 +12,8 @@ from src.rag.evaluation import run_evaluation
 from src.rag.pipeline import RAGPipeline
 from src.vectorstore.milvus_store import MilvusStore
 
-# Sample questions used for both pipeline runs and evaluation
+app = typer.Typer()
+
 EVAL_QUESTIONS = [
     "What work did Equal Experts do for IG group?",
     "What was demonstrated in the Forrester study?",
@@ -16,76 +21,96 @@ EVAL_QUESTIONS = [
 ]
 
 
-def run_pipeline(chunker_name: str, chunker: object) -> None:  # type: ignore[type-arg]
-    """Run the full pipeline with the given chunker and evaluate results."""
-    print(f"\n{'='*60}")
-    print(f"Running pipeline with: {chunker_name}")
-    print("=" * 60)
+def configure_logging() -> None:
+    logging.basicConfig(
+        level=settings.LOG_LEVEL,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
+
+def load_documents(source_path: Path) -> List[str]:
+    with source_path.open("r", encoding="utf-8") as f:
+        case_studies = json.load(f)
+        return [study["content"] for study in case_studies if study.get("content")]
+
+
+def run_pipeline(chunker_name: str, chunker: object, evaluate: bool = True) -> None:  # type: ignore[type-arg]
+    logger = logging.getLogger(__name__)
+    logger.info("Running pipeline with: %s", chunker_name)
 
     llm = OllamaLLM()
     vector_store = MilvusStore()
     pipeline = RAGPipeline(llm=llm, chunker=chunker, vector_store=vector_store)  # type: ignore[arg-type]
 
     try:
-        with open(settings.CASE_STUDIES_PATH, "r", encoding="utf-8") as f:
-            case_studies = json.load(f)
-            documents: List[str] = [study["content"] for study in case_studies]
-
-        print(f"Processing {len(documents)} documents...")
+        documents = load_documents(Path(settings.CASE_STUDIES_PATH))
+        logger.info("Processing %d documents", len(documents))
         pipeline.add_documents(documents)
-        print("Documents stored.\n")
 
-        # Collect answers and retrieved contexts for RAGAS evaluation
         answers: List[str] = []
         contexts: List[List[str]] = []
 
         for question in EVAL_QUESTIONS:
-            print(f"Q: {question}")
-
-            # Retrieve contexts explicitly so we can pass them to RAGAS
+            logger.info("Asking question: %s", question)
             q_embedding = llm.get_embeddings(question)
             hits = vector_store.retrieve(q_embedding, limit=settings.DEFAULT_TOP_K)
             retrieved_contexts = [str(hit["text"]) for hit in hits]
 
             answer = pipeline.query(question, top_k=settings.DEFAULT_TOP_K)
-            print(f"A: {answer}\n")
+            logger.info("Answer: %s", answer)
 
             answers.append(answer)
             contexts.append(retrieved_contexts)
 
-        # --- RAGAS Evaluation ---
-        print(f"\n--- LLM-as-Judge Evaluation for {chunker_name} ---")
-        scores = run_evaluation(
-            questions=EVAL_QUESTIONS,
-            answers=answers,
-            contexts=contexts,
-            llm=llm,
-        )
-        for metric, score in scores.items():
-            print(f"  {metric}: {score:.4f}")
+        if evaluate:
+            logger.info("Evaluating pipeline results")
+            scores = run_evaluation(
+                questions=EVAL_QUESTIONS,
+                answers=answers,
+                contexts=contexts,
+                llm=llm,
+            )
+            for metric, score in scores.items():
+                logger.info("%s: %.4f", metric, score)
 
-    except Exception as e:
-        print(f"Error: {e}")
+    except Exception:
+        logger.exception("Pipeline execution failed")
         raise
     finally:
         llm.close()
 
 
-def main() -> None:
-    # Run with SimpleChunker (character-based sliding window)
-    simple_chunker = SimpleChunker(
-        chunk_size=settings.DEFAULT_CHUNK_SIZE,
-        overlap=settings.DEFAULT_CHUNK_OVERLAP,
-    )
-    run_pipeline("SimpleChunker (character-based)", simple_chunker)
+@app.command()
+def run(
+    chunker: str = typer.Option(
+        "advanced",
+        "--chunker",
+        "-c",
+        help="Choose chunker implementation: simple or advanced.",
+    ),
+    skip_evaluation: bool = typer.Option(
+        False,
+        "--skip-evaluation",
+        help="Skip the RAGAS evaluation step.",
+    ),
+) -> None:
+    configure_logging()
+    chunker_choice = chunker.lower()
+    if chunker_choice == "simple":
+        selected_chunker = SimpleChunker(
+            chunk_size=settings.DEFAULT_CHUNK_SIZE,
+            overlap=settings.DEFAULT_CHUNK_OVERLAP,
+        )
+        chunker_name = "SimpleChunker (character-based)"
+    else:
+        selected_chunker = AdvancedChunker(
+            chunk_size=settings.DEFAULT_CHUNK_SIZE,
+            overlap=settings.DEFAULT_CHUNK_OVERLAP,
+        )
+        chunker_name = "AdvancedChunker (sentence-aware)"
 
-    # Run with AdvancedChunker (recursive paragraph/sentence-aware)
-    advanced_chunker = AdvancedChunker(
-        chunk_size=settings.DEFAULT_CHUNK_SIZE,
-        overlap=settings.DEFAULT_CHUNK_OVERLAP,
-    )
-    run_pipeline("AdvancedChunker (sentence-aware)", advanced_chunker)
+    run_pipeline(chunker_name=chunker_name, chunker=selected_chunker, evaluate=not skip_evaluation)
 
 
 if __name__ == "__main__":
-    main()
+    app()
