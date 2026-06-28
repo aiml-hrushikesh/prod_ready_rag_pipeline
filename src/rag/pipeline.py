@@ -17,26 +17,34 @@ class RAGPipeline:
 
     def add_documents(self, documents: List[str]) -> None:
         """
-        TODO: Candidate to implement document processing pipeline:
-        1. Chunk documents into smaller pieces
-        2. Generate embeddings for chunks
-        3. Store chunks and embeddings in vector store
-
-        For testing purposes, we'll use a simple fixed text.
+        Ingest documents by chunking them, generating embeddings,
+        and storing them in the vector store.
         """
-        # Fixed text for testing
-        fixed_texts = [
-            "Equal Experts helped HMRC support the economy during COVID-19 by building new services in four weeks.",
-            "Equal Experts worked with Pret A Manger to develop their digital platform and mobile app.",
-            "The Forrester study showed $61 million in benefits from reduced costs and increased revenues.",
-        ]
-        # Fixed embeddings (768-dimensional vectors filled with 0.1)
-        fixed_embeddings = [[0.1] * settings.EMBEDDING_DIMENSION for _ in fixed_texts]
+        all_chunks = []
+        for doc in documents:
+            if not doc:
+                continue
+            chunks = self.chunker.chunk_text(doc)
+            all_chunks.extend(chunks)
 
-        # Store fixed data
-        self.vector_store.insert_embeddings(
-            embeddings=fixed_embeddings, texts=fixed_texts
-        )
+        # Filter out empty or whitespace-only chunks
+        all_chunks = [c.strip() for c in all_chunks if c and c.strip()]
+
+        if not all_chunks:
+            print("No valid chunks generated from the documents.")
+            return
+
+        print(f"Generating embeddings for {len(all_chunks)} chunks...")
+        embeddings = []
+        for i, chunk in enumerate(all_chunks):
+            # Print a progress indicator every 10 chunks if needed
+            if i > 0 and i % 50 == 0:
+                print(f"Processed {i}/{len(all_chunks)} chunks...")
+            emb = self.llm.get_embeddings(chunk)
+            embeddings.append(emb)
+
+        print("Storing chunks in vector store...")
+        self.vector_store.insert_embeddings(embeddings=embeddings, texts=all_chunks)
 
     def query(
         self,
@@ -51,7 +59,8 @@ class RAGPipeline:
             query_embedding=question_embedding, limit=top_k
         )
         context = "\n\n".join(str(hit["text"]) for hit in results)
-        prompt = f"""Use the following context to answer the question. If you cannot answer this question based on the context, say "I cannot answer this question based on the available information."
+        prompt = f"""You are a professional assistant representing Equal Experts. 
+Use the following context to answer the question. If the context does not contain enough information to answer the question, say "I cannot answer this question based on the available information."
 
 Context:
 {context}
@@ -61,3 +70,4 @@ Question: {question}
 Answer:"""
         answer = self.llm.generate(prompt=prompt, temperature=temperature)
         return answer
+

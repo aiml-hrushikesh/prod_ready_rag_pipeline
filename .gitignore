@@ -1,0 +1,4 @@
+.venv/
+milvus.db/
+__pycache__/
+*.pyc
