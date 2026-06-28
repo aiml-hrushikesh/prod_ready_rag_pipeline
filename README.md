@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 
->>>>>>> d55ac52 (Add production deployment files and complete pipeline configuration)
 # RAG Pipeline Exercise
 
 This exercise involves implementing a Retrieval-Augmented Generation (RAG) pipeline to answer questions about Equal Experts case studies. The pipeline combines document chunking, embeddings, vector search, and LLM-based question answering.
