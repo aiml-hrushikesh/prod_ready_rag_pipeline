@@ -1,0 +1,17 @@
+[
+  "tests/test_chunking_strategies.py::test_advanced_chunker",
+  "tests/test_chunking_strategies.py::test_simple_chunker",
+  "tests/test_llm.py::test_ollama_error_handling",
+  "tests/test_llm.py::test_ollama_generate",
+  "tests/test_llm.py::test_ollama_get_embeddings",
+  "tests/test_pipeline.py::test_add_documents",
+  "tests/test_pipeline.py::test_add_documents_empty_input",
+  "tests/test_pipeline.py::test_pipeline_query",
+  "tests/test_pipeline.py::test_query_prompt_contains_context",
+  "tests/test_vectorstore.py::test_milvus_store_create_collection",
+  "tests/test_vectorstore.py::test_milvus_store_create_collection_existing",
+  "tests/test_vectorstore.py::test_milvus_store_init",
+  "tests/test_vectorstore.py::test_milvus_store_insert_embeddings",
+  "tests/test_vectorstore.py::test_milvus_store_insert_embeddings_validation",
+  "tests/test_vectorstore.py::test_milvus_store_retrieve"
+]
